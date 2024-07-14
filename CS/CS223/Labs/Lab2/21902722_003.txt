@@ -1,0 +1,187 @@
+`timescale 1ns / 1ps
+
+module BehavioralFullAdder( input logic a, b, cin, output logic sum, cout );
+    
+    assign sum = a ^ b ^ cin;
+    assign cout = (a & b) | (cin & a) | (cin & b);
+    
+endmodule
+
+`timescale 1ns / 1ps
+
+module BehavioralFATestbench();
+
+    logic a, b, cin, sum, cout;
+    BehavioralFullAdder dut( a, b, cin, sum, cout );
+    
+    initial begin
+        a = 0; b = 0; cin = 0; #10; 
+        cin = 1; #10; 
+        b = 1; cin = 0; #10; 
+        cin = 1; #10; 
+        a = 1; b = 0; cin = 0; #10; 
+        cin = 1; #10; 
+        b = 1; cin = 0; #10; 
+        cin = 1; #10;
+    end
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module StructuralFullAdder( input logic a, b , cin, output logic sum, cout );
+
+    logic x, y, z;
+    XorGate xorgate( a, b, x );
+    XorGate xorgate2( x, cin, sum );
+    AndGate andgate( x, cin, y  );
+    AndGate andgate2( a, b, z  );
+    OrGate orgate( y, z, cout );
+    
+endmodule
+
+module AndGate( input logic a, b, output logic c);
+
+    assign c = a & b;
+
+endmodule
+
+module XorGate( input logic a, b, output logic c);
+
+    assign c = a ^ b;
+
+endmodule
+
+module OrGate( input logic a, b, output logic c);
+
+    assign c = a | b;
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module TestBenchStructuralFA();
+
+    logic a, b, cin, sum, cout;
+    StructuralFullAdder dut( a, b, cin, sum, cout );
+    
+    initial begin 
+        a = 0; b = 0; cin = 0; #10; 
+        cin = 1; #10; 
+        b = 1; cin = 0; #10; 
+        cin = 1; #10; 
+        a = 1; b = 0; cin = 0; #10; 
+        cin = 1; #10; 
+        b = 1; cin = 0; #10; 
+        cin = 1; #10;
+    end
+    
+endmodule
+
+`timescale 1ns / 1ps
+
+module StructuralTwoBitAdder( input logic a0, a1, b0, b1, cin, output logic sum0, sum1, cout);
+
+    logic firstCout;
+    StructuralFullAdder fa1(a0, b0, cin, sum0, firstCout);
+    StructuralFullAdder fa2(a1, b1, firstCout, sum1, cout);
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module TestBenchTwoBitAdder();
+
+    logic a0, a1, b0, b1, cin, sum0, sum1, cout;
+    StructuralTwoBitAdder dut( a0, a1, b0, b1, cin, sum0, sum1, cout );
+    
+    initial begin
+        a0 = 0; a1 = 0; b0 = 0; b1 = 0; cin = 0; #10;
+        a0 = 0; a1 = 0; b0 = 0; b1 = 0; cin = 1; #10;
+        a0 = 0; a1 = 0; b0 = 0; b1 = 1; cin = 0; #10;
+        a0 = 0; a1 = 0; b0 = 0; b1 = 1; cin = 1; #10;
+        a0 = 0; a1 = 0; b0 = 1; b1 = 0; cin = 0; #10;
+        a0 = 0; a1 = 0; b0 = 1; b1 = 0; cin = 1; #10;
+        a0 = 0; a1 = 0; b0 = 1; b1 = 1; cin = 0; #10;
+        a0 = 0; a1 = 0; b0 = 1; b1 = 1; cin = 1; #10;
+        a0 = 0; a1 = 1; b0 = 0; b1 = 0; cin = 0; #10;
+        a0 = 0; a1 = 1; b0 = 0; b1 = 0; cin = 1; #10;
+        a0 = 0; a1 = 1; b0 = 0; b1 = 1; cin = 0; #10;
+        a0 = 0; a1 = 1; b0 = 0; b1 = 1; cin = 1; #10;
+        a0 = 0; a1 = 1; b0 = 1; b1 = 0; cin = 0; #10;
+        a0 = 0; a1 = 1; b0 = 1; b1 = 0; cin = 1; #10;
+        a0 = 0; a1 = 1; b0 = 1; b1 = 1; cin = 0; #10;
+        a0 = 0; a1 = 1; b0 = 1; b1 = 1; cin = 1; #10;
+        a0 = 1; a1 = 0; b0 = 0; b1 = 0; cin = 0; #10;
+        a0 = 1; a1 = 0; b0 = 0; b1 = 0; cin = 1; #10;
+        a0 = 1; a1 = 0; b0 = 0; b1 = 1; cin = 0; #10;
+        a0 = 1; a1 = 0; b0 = 0; b1 = 1; cin = 1; #10;
+        a0 = 1; a1 = 0; b0 = 1; b1 = 0; cin = 0; #10;
+        a0 = 1; a1 = 0; b0 = 1; b1 = 0; cin = 1; #10;
+        a0 = 1; a1 = 0; b0 = 1; b1 = 1; cin = 0; #10;
+        a0 = 1; a1 = 0; b0 = 1; b1 = 1; cin = 1; #10;
+        a0 = 1; a1 = 1; b0 = 0; b1 = 0; cin = 0; #10;
+        a0 = 1; a1 = 1; b0 = 0; b1 = 0; cin = 1; #10;
+        a0 = 1; a1 = 1; b0 = 0; b1 = 1; cin = 0; #10;
+        a0 = 1; a1 = 1; b0 = 0; b1 = 1; cin = 1; #10;
+        a0 = 1; a1 = 1; b0 = 1; b1 = 0; cin = 0; #10;
+        a0 = 1; a1 = 1; b0 = 1; b1 = 0; cin = 1; #10;
+        a0 = 1; a1 = 1; b0 = 1; b1 = 1; cin = 0; #10;
+        a0 = 1; a1 = 1; b0 = 1; b1 = 1; cin = 1; #10;
+    end
+    
+endmodule
+
+`timescale 1ns / 1ps
+
+module StructuralLabCalculator( input logic c, d, a, b, output logic y, z);
+
+    logic temp1, temp2, temp3, temp4;
+    HalfSubtractor hs(a, b, temp1, temp2);
+    HalfAdder ha(a, b, temp3, temp4);
+    assign y = c ? (d ? temp1 : temp3) : (d ? ~(a | b) : (a & b));
+    assign z = c ? (d ? temp2 : temp4) : (d ? 0 : 0);
+
+endmodule
+
+module HalfAdder( input logic a, b, output logic sum, carry);
+
+    assign sum = a ^ b;
+    assign carry = a & b;
+
+endmodule
+
+module HalfSubtractor( input logic a, b, output logic diff, borrow );
+
+    assign diff = a ^ b;
+    assign borrow = ~a & b;
+    
+endmodule
+
+`timescale 1ns / 1ps
+
+module TestBenchLabCalculator();
+
+    logic c, d, a, b, y, z;
+    StructuralLabCalculator dut( c, d, a, b, y, z );
+    
+    initial begin
+        c = 0; d = 0; a = 0; b = 0; #10;
+        c = 0; d = 0; a = 0; b = 1; #10;
+        c = 0; d = 0; a = 1; b = 0; #10;
+        c = 0; d = 0; a = 1; b = 1; #10;
+        c = 0; d = 1; a = 0; b = 0; #10;
+        c = 0; d = 1; a = 0; b = 1; #10;
+        c = 0; d = 1; a = 1; b = 0; #10;
+        c = 0; d = 1; a = 1; b = 1; #10;
+        c = 1; d = 0; a = 0; b = 0; #10;
+        c = 1; d = 0; a = 0; b = 1; #10;
+        c = 1; d = 0; a = 1; b = 0; #10;
+        c = 1; d = 0; a = 1; b = 1; #10;
+        c = 1; d = 1; a = 0; b = 0; #10;
+        c = 1; d = 1; a = 0; b = 1; #10;
+        c = 1; d = 1; a = 1; b = 0; #10;
+        c = 1; d = 1; a = 1; b = 1; #10;
+    end
+
+endmodule

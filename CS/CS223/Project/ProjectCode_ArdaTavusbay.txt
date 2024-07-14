@@ -1,0 +1,282 @@
+`timescale 1ns / 1ps
+
+module TopModule(input logic[11:0] extInstr,
+                 input logic RightB, LeftB, clk, reset);
+
+logic[11:0] instr, data;
+logic [2:0]pc_out;
+logic ALU_src_sel, reg_wr_sel, pc_sel;
+logic DM_re, DM_we, RF_we;
+logic[2:0] op, RF_add1, RF_add2, RF_wa;
+logic[3:0] DM_add, DM_rd, RF_d2;
+
+//logic pulse;
+//debouncer db(clk, RightB, pulse);
+
+ControlUnit cu( instr, extInstr, clk, reset, LeftB, RightB, EQ, pc_out, 
+                ALU_src_sel, reg_wr_sel,
+                DM_re, DM_we, RF_we,
+                data,
+                op, RF_add1, RF_add2, RF_wa,
+                DM_add);
+                
+imem imem( pc_out, clk, instr);
+
+DataMemory dm(DM_add, RF_d2,  DM_re, DM_we, clk, DM_rd);
+
+Datapath dp(data,
+            op, RF_add1, RF_add2, RF_wa,
+            clk, RF_we,
+            ALU_src_sel, reg_wr_sel,
+            DM_rd,
+            RF_d2, 
+            EQ );
+
+endmodule
+
+module debouncer(input logic clk, input logic RightB, output logic pulse);
+    logic [26:0] timer;
+    logic inp;
+    
+    always_ff@(posedge clk)
+        begin    
+            if(inp)
+                timer <= 500000;
+            else
+                timer <= timer - 1;
+        end
+    always_comb
+            if(RightB) 
+                inp = 1;
+            else
+                inp = 0;
+endmodule
+
+`timescale 1ns / 1ps
+
+module ControlUnit( input logic[11:0] instr, extInstr,
+                    input logic       clk, reset, LeftB, RightB, EQ,
+                    output logic[2:0] pc_out,
+                    output logic      ALU_src_sel, reg_wr_sel,
+                    output logic      DM_re, DM_we, RF_we,
+                    output logic[11:0]data,
+                    output logic[2:0] op, RF_add1, RF_add2, RF_wa,
+                    output logic[3:0] DM_add);
+
+logic isExternal, pc_sel;                    
+logic [2:0] pc_plus, pc_jump, pc_curr;
+logic [11:0] data_out;
+
+assign pc_plus = pc_out + 3'b001;
+assign pc_jump = (pc_out + RF_wa) % 8;
+
+Mux2to1 #(3) mux1( pc_plus, pc_jump, pc_sel, pc_curr);
+PC pc(clk, reset, isExternal, pc_curr, pc_out );
+
+Mux2to1 #(12) mux2(instr, extInstr, isExternal, data);
+InstructionRegister ir(data, clk, data_out);
+Controller controller( LeftB, RightB, EQ, data_out, op, RF_add1, RF_add2, RF_wa, DM_add, DM_re, DM_we, RF_we, isExternal, ALU_src_sel, reg_wr_sel, pc_sel);
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module Mux2to1 #(parameter WIDTH = 4)
+                (input logic [WIDTH-1:0]input1, input2, input logic sel, output logic [WIDTH-1:0]out);
+
+assign out = sel ? input2 : input1;
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module PC(input logic clk, reset, isExternal, input logic [2:0]pc_in, output logic [2:0]pc_out);
+
+always@ (posedge clk)
+begin
+    if(reset)
+      pc_out = 3'b000;
+    else if(~isExternal)
+      pc_out = pc_in;
+end 
+endmodule
+
+`timescale 1ns / 1ps
+module InstructionRegister (input [11:0] ins, input clk,
+                            output logic [11:0]out);
+
+	always@ (posedge clk)
+    begin
+        out = ins;
+    end
+endmodule
+
+`timescale 1ns / 1ps
+
+module Controller(input  logic       leftB, rightB, EQ,
+                  input  logic[11:0] instr,
+                  output logic[2:0]  op, RF_add1, RF_add2, RF_wa,
+                  output logic[3:0]  DM_add,
+                  output logic       DM_re, DM_we, RF_we,
+                  output logic       isExternal, 
+                  output logic       ALU_src_sel, reg_wr_sel, pc_sel);
+                  
+assign op = instr[11:9];
+
+always_comb
+begin
+
+isExternal <= (rightB && ~leftB) || (~rightB && ~leftB) ? 1 : 0;
+
+//no <'s
+
+case(op)
+3'b101: // ADD
+    begin
+        RF_add1 <= instr[5:3];
+        RF_wa <= instr[8:6];
+        DM_re <= 0; DM_we <= 0;
+        ALU_src_sel <= 1; reg_wr_sel <= 0; pc_sel <= 0;
+        RF_we <= 1;
+    end
+3'b010: // SUB
+    begin
+        RF_add1 <= instr[5:3];
+        RF_add2 <= instr[2:0];
+        RF_wa <= instr[8:6];
+        DM_re <= 0; DM_we <= 0;
+        ALU_src_sel <= 0; reg_wr_sel <= 0; pc_sel <= 0;
+        RF_we <= 1;
+    end
+3'b000: // LOAD
+    begin
+        RF_wa <= instr[6:4];
+        DM_add <= instr[3:0];
+        DM_re <= 1; DM_we <= 0;
+        reg_wr_sel <= 1; pc_sel <= 0;
+        RF_we <= 1;
+    end
+3'b001: // STORE
+    begin
+        RF_add2 <= instr[6:4];
+        DM_add <= instr[3:0];
+        DM_re <= 0; DM_we <= 1; RF_we <= 0;
+        pc_sel <= 0;
+    end
+3'b111: // JUMP
+    begin
+        RF_add1 <= instr[5:3];
+        RF_add2 <= instr[2:0];
+        ALU_src_sel <= 0;
+        pc_sel <= EQ ? 1 : 0;
+    end
+default: ;
+
+endcase
+end
+endmodule
+
+`timescale 1ns / 1ps
+module imem(input logic [2:0] pc, 
+            input logic clk,
+            output logic [11:0] instr);
+            
+logic [11:0] im[7:0];
+
+assign im[0] = 12'b101000000010;
+assign im[1] = 12'b101001000001;
+assign im[2] = 12'b010010001000;
+assign im[3] = 12'b001000100000;
+assign im[4] = 12'b000000110000;
+assign im[5] = 12'b111100000001;
+assign im[6] = 12'b111010010011;
+assign im[7] = 12'b101100000100;
+    
+assign instr = im[pc];
+/*always@ (posedge clk)
+    begin
+        instr = im[pc];
+    end*/
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module DataMemory(input logic [3:0]M_add, M_wd,
+                  input logic M_re, M_we, clk,
+                  output logic [3:0]M_rd);
+                  
+logic [3:0] dm [15:0] = '{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+always_ff@(posedge clk) // no ff
+begin
+    if(M_re)
+	    M_rd <= dm[M_add]; // no < for both
+
+	else if(M_we)
+		dm[M_add] <= M_wd;
+	
+end
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module Datapath( input logic[11:0] instr,
+                 input logic[2:0] op, RF_add1, RF_add2, RF_wa,
+                 input logic clk, RF_we, 
+                 input logic Alu_src_sel, Reg_sel,
+                 input logic[3:0] DM_rd,
+                 output logic[3:0] RF_d2,
+                 output logic EQ );
+                               
+logic [3:0]RF_d1, RF_wd, result;
+logic [3:0]muxOut;
+
+RegFile rf( RF_add1, RF_add2, RF_wa, RF_we, clk, RF_wd, RF_d1, RF_d2);
+
+Mux2to1 mux1(RF_d2, {1'b0,instr[2:0]}, Alu_src_sel, muxOut);
+
+ALU alu(RF_d1, muxOut, op, result, EQ);
+
+Mux2to1 mux2(result, DM_rd, Reg_sel, RF_wd);
+
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module RegFile(input logic [2:0] RF_add1, RF_add2, RF_wa,
+			   input logic RF_we, clk,
+			   input logic [3:0]RF_wd,
+			   output logic [3:0]RF_d1, RF_d2);
+
+logic [3:0] rfm[7:0];
+
+assign rfm = '{0,0,0,0,0,0,0,0};
+
+assign RF_d1 = rfm[RF_add1];
+assign RF_d2 = rfm[RF_add2];
+always_ff@(posedge clk) // no ff
+begin
+	if(RF_we)
+		rfm[RF_wa] <= RF_wd; // no <
+end
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module ALU( input  logic [3:0] RFd1, RFd2, 
+            input  logic [2:0] ALUop, 
+            output logic [3:0] result, 
+            output logic EQ);
+    
+    always_comb
+        case(ALUop) // no <'s for all
+            3'b101: result <= RFd1 + RFd2; // ADD
+            3'b010: result <= RFd1 - RFd2; // SUB
+            3'b111: EQ <= (RFd1 == RFd2) ? 1 : 0;
+            default: result <= 3'bx;
+        endcase
+endmodule

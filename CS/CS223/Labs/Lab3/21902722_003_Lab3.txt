@@ -1,0 +1,271 @@
+`timescale 1ns / 1ps
+
+module BehavioralTwoFourD(input logic a, b,
+                          output logic y0, y1, y2, y3);
+                          
+assign y0 = ~a & ~b;
+assign y1 = ~a & b;
+assign y2 = a & ~b;
+assign y3 = a & b;   
+                          
+endmodule
+
+`timescale 1ns / 1ps
+
+module BehavioralTwoOneM(input logic i0, i1, s, output logic y);
+
+assign y = s ? i1 : i0;
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module StructuralFourOneM(input logic i0, i1, i2, i3, s0, s1, output logic y);
+
+logic w0, w1;
+
+BehavioralTwoOneM mux1 (i0, i1, s0, w0);
+BehavioralTwoOneM mux2 (i2, i3, s0, w1);
+BehavioralTwoOneM mux3 (w0, w1, s1, y);
+
+endmodule
+
+`timescale 1ns / 1ps
+
+
+module StructuralEightOneM(input logic d0, d1, d2, d3, d4, d5, d6, d7, s0, s1, s2, output logic y);
+
+logic w0, w1, w2, w3, w4;
+
+StructuralFourOneM mux1(d0, d1, d2, d3, s0, s1, w0);
+StructuralFourOneM mux2(d4, d5, d6, d7, s0, s1, w1);
+Inverter inverter(s2, w2);
+AndGate and1(w0, w2, w3);
+AndGate and2(w1, s2, w4);
+OrGate or1(w3, w4, y);
+
+
+endmodule
+
+module AndGate(input logic a, b, output logic y);
+assign y = a & b;
+endmodule
+
+module OrGate(input logic a, b, output logic y);
+assign y = a | b;
+endmodule
+
+module Inverter(input logic a, output logic y);
+assign y = ~a;
+endmodule
+
+`timescale 1ns / 1ps
+
+module FunctionABCD(input logic a, b, c, d, output logic y);
+
+logic notD;
+
+Inverter inv(d, notD);
+StructuralEightOneM mux3(0, notD, d, 1, 0, notD, 1, d, c, b, a, y);
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module TB_FunctionABCD();
+
+logic a, b, c, d, y;
+
+FunctionABCD dut(a, b, c, d, y);
+
+initial begin
+a = 0; b = 0; c = 0; d = 0; #10;
+a = 0; b = 0; c = 0; d = 1; #10;
+a = 0; b = 0; c = 1; d = 0; #10;
+a = 0; b = 0; c = 1; d = 1; #10;
+a = 0; b = 1; c = 0; d = 0; #10;
+a = 0; b = 1; c = 0; d = 1; #10;
+a = 0; b = 1; c = 1; d = 0; #10;
+a = 0; b = 1; c = 1; d = 1; #10;
+a = 1; b = 0; c = 0; d = 0; #10;
+a = 1; b = 0; c = 0; d = 1; #10;
+a = 1; b = 0; c = 1; d = 0; #10;
+a = 1; b = 0; c = 1; d = 1; #10;
+a = 1; b = 1; c = 0; d = 0; #10;
+a = 1; b = 1; c = 0; d = 1; #10;
+a = 1; b = 1; c = 1; d = 0; #10;
+a = 1; b = 1; c = 1; d = 1; #10;
+end
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module TB_BehavioralTwoFourD();
+
+logic a, b, y0, y1, y2, y3;
+
+BehavioralTwoFourD dut(a, b, y0, y1, y2, y3);
+
+initial begin
+a = 0; b = 0; #10;
+b = 1; #10;
+a = 1; b = 0; #10;
+b = 1; #10;
+end
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module TB_BehavioralTwoOneM();
+
+logic i0, i1, s, y;
+
+BehavioralTwoOneM dut( i0, i1, s, y);
+
+initial begin
+s = 0; i0 = 0; i1 = 0; #10;
+s = 0; i0 = 0; i1 = 1; #10;
+s = 0; i0 = 1; i1 = 0; #10;
+s = 0; i0 = 1; i1 = 1; #10;
+s = 1; i0 = 0; i1 = 0; #10;
+s = 1; i0 = 0; i1 = 1; #10;
+s = 1; i0 = 1; i1 = 0; #10;
+s = 1; i0 = 1; i1 = 1; #10;
+end
+
+endmodule
+
+`timescale 1ns / 1ps
+
+
+module TB_StructuralEightOneM();
+
+logic d0, d1, d2, d3, d4, d5, d6, d7, s0, s1, s2, y;
+
+StructuralEightOneM dut(d0, d1, d2, d3, d4, d5, d6, d7, s0, s1, s2, y);
+
+initial begin
+        for (int i7 = 0; i7 < 2 ; i7 = i7 + 1) begin
+            d7 = i7; 
+            
+            for (int i6 = 0; i6 < 2 ; i6 = i6 + 1) begin
+                d6 = i6; 
+                
+                for (int i5 = 0; i5 < 2 ; i5 = i5 + 1) begin
+                    d5 = i5; 
+                    
+                    for (int i4 = 0; i4 < 2 ; i4 = i4 + 1) begin
+                        d4 = i4; 
+                        
+                        for (int i3 = 0; i3 < 2 ; i3 = i3 + 1) begin
+                            d3 = i3; 
+                            
+                            for (int i2 = 0; i2 < 2 ; i2 = i2 + 1) begin
+                                d2 = i2; 
+                                
+                                for (int i1 = 0; i1 < 2 ; i1 = i1 + 1) begin
+                                    d1 = i1; 
+                                    
+                                    for (int i0 = 0; i0 < 2 ; i0 = i0 + 1) begin
+                                        d0 = i0;
+                                        s2 = 0; s1 = 0; s0 = 0; #10; 
+                                        s0 = 1; #10;
+                                        s1 = 1; s0 = 0; #10;
+                                        s0 = 1; #10;
+                                        s2 = 1; s1 = 0; s0 = 0; #10; 
+                                        s0 = 1; #10;
+                                        s1 = 1; s0 = 0; #10;
+                                        s0 = 1; #10;
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end           
+        end 
+    end
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module TB_StructuralFourOneM();
+
+logic i0, i1, i2, i3, s0, s1, y;
+StructuralFourOneM dut(i0, i1, i2, i3, s0, s1, y);
+
+
+initial begin
+s1 = 0; s0 = 0; i3 = 0; i2 = 0; i1 = 0; i0 = 0; #10;
+s1 = 0; s0 = 0; i3 = 0; i2 = 0; i1 = 0; i0 = 1; #10;
+s1 = 0; s0 = 0; i3 = 0; i2 = 0; i1 = 1; i0 = 0; #10;
+s1 = 0; s0 = 0; i3 = 0; i2 = 0; i1 = 1; i0 = 1; #10;
+s1 = 0; s0 = 0; i3 = 0; i2 = 1; i1 = 0; i0 = 0; #10;
+s1 = 0; s0 = 0; i3 = 0; i2 = 1; i1 = 0; i0 = 1; #10;
+s1 = 0; s0 = 0; i3 = 0; i2 = 1; i1 = 1; i0 = 0; #10;
+s1 = 0; s0 = 0; i3 = 1; i2 = 1; i1 = 1; i0 = 1; #10;
+s1 = 0; s0 = 0; i3 = 1; i2 = 0; i1 = 0; i0 = 0; #10;
+s1 = 0; s0 = 0; i3 = 1; i2 = 0; i1 = 0; i0 = 1; #10;
+s1 = 0; s0 = 0; i3 = 1; i2 = 0; i1 = 1; i0 = 0; #10;
+s1 = 0; s0 = 0; i3 = 1; i2 = 0; i1 = 1; i0 = 1; #10;
+s1 = 0; s0 = 0; i3 = 1; i2 = 1; i1 = 0; i0 = 0; #10;
+s1 = 0; s0 = 0; i3 = 1; i2 = 1; i1 = 0; i0 = 1; #10;
+s1 = 0; s0 = 0; i3 = 1; i2 = 1; i1 = 1; i0 = 0; #10;
+s1 = 0; s0 = 0; i3 = 1; i2 = 1; i1 = 1; i0 = 1; #10;
+s1 = 0; s0 = 1; i3 = 0; i2 = 0; i1 = 0; i0 = 0; #10;
+s1 = 0; s0 = 1; i3 = 0; i2 = 0; i1 = 0; i0 = 1; #10;
+s1 = 0; s0 = 1; i3 = 0; i2 = 0; i1 = 1; i0 = 0; #10;
+s1 = 0; s0 = 1; i3 = 0; i2 = 0; i1 = 1; i0 = 1; #10;
+s1 = 0; s0 = 1; i3 = 0; i2 = 1; i1 = 0; i0 = 0; #10;
+s1 = 0; s0 = 1; i3 = 0; i2 = 1; i1 = 0; i0 = 1; #10;
+s1 = 0; s0 = 1; i3 = 0; i2 = 1; i1 = 1; i0 = 0; #10;
+s1 = 0; s0 = 1; i3 = 1; i2 = 1; i1 = 1; i0 = 1; #10;
+s1 = 0; s0 = 1; i3 = 1; i2 = 0; i1 = 0; i0 = 0; #10;
+s1 = 0; s0 = 1; i3 = 1; i2 = 0; i1 = 0; i0 = 1; #10;
+s1 = 0; s0 = 1; i3 = 1; i2 = 0; i1 = 1; i0 = 0; #10;
+s1 = 0; s0 = 1; i3 = 1; i2 = 0; i1 = 1; i0 = 1; #10;
+s1 = 0; s0 = 1; i3 = 1; i2 = 1; i1 = 0; i0 = 0; #10;
+s1 = 0; s0 = 1; i3 = 1; i2 = 1; i1 = 0; i0 = 1; #10;
+s1 = 0; s0 = 1; i3 = 1; i2 = 1; i1 = 1; i0 = 0; #10;
+s1 = 0; s0 = 1; i3 = 1; i2 = 1; i1 = 1; i0 = 1; #10;
+s1 = 1; s0 = 0; i3 = 0; i2 = 0; i1 = 0; i0 = 0; #10;
+s1 = 1; s0 = 0; i3 = 0; i2 = 0; i1 = 0; i0 = 1; #10;
+s1 = 1; s0 = 0; i3 = 0; i2 = 0; i1 = 1; i0 = 0; #10;
+s1 = 1; s0 = 0; i3 = 0; i2 = 0; i1 = 1; i0 = 1; #10;
+s1 = 1; s0 = 0; i3 = 0; i2 = 1; i1 = 0; i0 = 0; #10;
+s1 = 1; s0 = 0; i3 = 0; i2 = 1; i1 = 0; i0 = 1; #10;
+s1 = 1; s0 = 0; i3 = 0; i2 = 1; i1 = 1; i0 = 0; #10;
+s1 = 1; s0 = 0; i3 = 1; i2 = 1; i1 = 1; i0 = 1; #10;
+s1 = 1; s0 = 0; i3 = 1; i2 = 0; i1 = 0; i0 = 0; #10;
+s1 = 1; s0 = 0; i3 = 1; i2 = 0; i1 = 0; i0 = 1; #10;
+s1 = 1; s0 = 0; i3 = 1; i2 = 0; i1 = 1; i0 = 0; #10;
+s1 = 1; s0 = 0; i3 = 1; i2 = 0; i1 = 1; i0 = 1; #10;
+s1 = 1; s0 = 0; i3 = 1; i2 = 1; i1 = 0; i0 = 0; #10;
+s1 = 1; s0 = 0; i3 = 1; i2 = 1; i1 = 0; i0 = 1; #10;
+s1 = 1; s0 = 0; i3 = 1; i2 = 1; i1 = 1; i0 = 0; #10;
+s1 = 1; s0 = 0; i3 = 1; i2 = 1; i1 = 1; i0 = 1; #10;
+s1 = 1; s0 = 1; i3 = 0; i2 = 0; i1 = 0; i0 = 0; #10;
+s1 = 1; s0 = 1; i3 = 0; i2 = 0; i1 = 0; i0 = 1; #10;
+s1 = 1; s0 = 1; i3 = 0; i2 = 0; i1 = 1; i0 = 0; #10;
+s1 = 1; s0 = 1; i3 = 0; i2 = 0; i1 = 1; i0 = 1; #10;
+s1 = 1; s0 = 1; i3 = 0; i2 = 1; i1 = 0; i0 = 0; #10;
+s1 = 1; s0 = 1; i3 = 0; i2 = 1; i1 = 0; i0 = 1; #10;
+s1 = 1; s0 = 1; i3 = 0; i2 = 1; i1 = 1; i0 = 0; #10;
+s1 = 1; s0 = 1; i3 = 1; i2 = 1; i1 = 1; i0 = 1; #10;
+s1 = 1; s0 = 1; i3 = 1; i2 = 0; i1 = 0; i0 = 0; #10;
+s1 = 1; s0 = 1; i3 = 1; i2 = 0; i1 = 0; i0 = 1; #10;
+s1 = 1; s0 = 1; i3 = 1; i2 = 0; i1 = 1; i0 = 0; #10;
+s1 = 1; s0 = 1; i3 = 1; i2 = 0; i1 = 1; i0 = 1; #10;
+s1 = 1; s0 = 1; i3 = 1; i2 = 1; i1 = 0; i0 = 0; #10;
+s1 = 1; s0 = 1; i3 = 1; i2 = 1; i1 = 0; i0 = 1; #10;
+s1 = 1; s0 = 1; i3 = 1; i2 = 1; i1 = 1; i0 = 0; #10;
+s1 = 1; s0 = 1; i3 = 1; i2 = 1; i1 = 1; i0 = 1; #10;
+
+
+end
+
+endmodule
+

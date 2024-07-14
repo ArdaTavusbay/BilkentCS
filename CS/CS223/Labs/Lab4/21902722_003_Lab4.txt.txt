@@ -1,0 +1,192 @@
+`timescale 1ns / 1ps
+
+module Mux4_1( input x0, x1, x2, x3, s0, s1, output reg y);
+
+always@(x0, x1, x2, x3, s0, s1)
+begin
+if (s1 == 0 && s0 == 0 )
+y = x0;
+if (s1 == 0 && s0 == 1 )
+y = x1;
+if (s1 == 1 && s0 == 0 )
+y = x2;
+if (s1 == 1 && s0 == 1 )
+y = x3;
+end
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module ResDFlipFlop(input logic d, clk, reset, output reg q);
+
+    always @(posedge clk) 
+    begin
+    if(reset==1'b1)
+        q <= 1'b0; 
+    else 
+        q <= d;
+    end 
+endmodule 
+
+`timescale 1ns / 1ps
+
+module ClockDivider1(input clk_in, output clk_out);
+
+reg [25:0] cnt = 0;
+reg clk_out;
+
+always@(posedge clk_in)
+begin
+cnt <= cnt + 1;
+if (cnt == 50_000_000)
+begin 
+cnt <= 0;
+clk_out = ~clk_out;
+end
+end
+
+endmodule
+
+
+`timescale 1ns / 1ps
+
+
+module MultifuncReg(input i0, i1, i2, i3, s0, s1, shr_in, shl_in, reset, clk, output [3:0]out);
+
+wire[3:0]w;
+reg clk_out;
+
+ClockDivider1 test(clk, clk_out);
+
+
+Mux4_1 m1( out[0], i0, out[1], shl_in, s0, s1, w[0]);
+Mux4_1 m2( out[1], i1, out[2], out[0], s0, s1, w[1]);
+Mux4_1 m3( out[2], i2, out[3], out[1], s0, s1, w[2]);
+Mux4_1 m4( out[3], i3, shr_in, out[2], s0, s1, w[3]);
+
+ResDFlipFlop d1(w[0], clk_out, reset, out[0]);
+ResDFlipFlop d2(w[1], clk_out, reset, out[1]);
+ResDFlipFlop d3(w[2], clk_out, reset, out[2]);
+ResDFlipFlop d4(w[3], clk_out, reset, out[3]);
+
+endmodule
+
+`timescale 1ns / 1ps
+
+
+module TestbenchResDFlipFlop();
+
+logic d, clk, reset, q;
+ResDFlipFlop dut(d, clk, reset, q);
+
+always
+    begin
+        clk = 0; #50;
+        clk = 1; #50;
+    end
+
+initial begin
+reset = 0;
+d = 0; #50;
+d = 0; #50;
+d = 1; #50;
+d = 1; #50;
+d = 0; #50;
+d = 0; #50;
+d = 1; #50;
+d = 1; #50;
+reset = 1; 
+end
+
+endmodule
+
+`timescale 1ns / 1ps
+
+module TestbenchMultifuncReg();
+
+reg i0, i1, i2, i3, s0, s1, shr_in, shl_in, reset, clk;
+wire [3:0]out;
+MultifuncReg dut(i0, i1, i2, i3, s0, s1, shr_in, shl_in, reset, clk, out);
+
+always #50clk=~clk;
+initial begin
+
+// INITIALIZE VALUES
+
+clk = 1'b0;
+reset = 1'b0;
+shl_in = 1'b1;
+shr_in = 1'b1;
+s0 = 1'b0;
+s1 = 1'b0;
+i0 = 0;
+i1 = 0;
+i2 = 0;
+i3 = 1;
+
+//CHECK PARALLEL LOAD
+//SELECT LINE: 01
+// ------------------------------------------------------------
+#100;
+s0 = 1;
+s1 = 0;
+
+#100;
+i0 = 1;
+i1 = 0;
+i2 = 1;
+i3 = 0;
+// ------------------------------------------------------------
+
+// CHECK IF IT STAYS THE SAME
+// SELECT LINE: 00
+// ------------------------------------------------------------
+#100;
+s0 = 0;
+s1 = 0;
+// ------------------------------------------------------------
+
+// CHECK SHIFT RIGHT
+// SELECT LINE: 11, [3:0]I = 0010 (i3 = 0, i2 = 0, i1= 1, i0 = 0)
+// EXPECTED OUTPUT = [3:0]I = 0100 (i3 = 0, i2 = 1, i1= 0, i0 = 0)
+// ------------------------------------------------------------
+#100;
+i0 = 0;
+i1 = 1;
+i2 = 0;
+i3 = 0;
+
+#100 // first load 0010
+s0 = 1;
+s1 = 0;
+
+#100; // check shift right
+s0 = 1;
+s1 = 1;
+// ------------------------------------------------------------
+
+// CHECK SHIFT LEFT
+// SELECT LINE: 10, [3:0]I = 0100 (i3 = 0, i2 = 1, i1= 0, i0 = 0)
+// EXPECTED OUTPUT = [3:0]I = 0010 (i3 = 0, i2 = 0, i1= 1, i0 = 0)
+// ------------------------------------------------------------
+#100;
+i0 = 0;
+i1 = 0;
+i2 = 1;
+i3 = 0;
+
+#100 // first load 0100
+s0 = 1;
+s1 = 0;
+
+#100; // check shift left
+s0 = 0;
+s1 = 1;
+// ------------------------------------------------------------
+
+end
+
+
+endmodule
+
